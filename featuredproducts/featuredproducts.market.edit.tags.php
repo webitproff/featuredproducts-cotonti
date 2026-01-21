@@ -22,7 +22,7 @@
 defined('COT_CODE') or die('Wrong URL');
 
 global $cfg, $L, $db, $db_market, $db_x; // $id,  $t
-
+require_once cot_langfile('featuredproducts', 'plug');
 $max = (int)($cfg['plugin']['featuredproducts']['maxitems'] ?? 5);
 if ($max < 1) $max = 5;
 
@@ -132,4 +132,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 JS
+
 );
