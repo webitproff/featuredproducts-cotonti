@@ -13,7 +13,7 @@
  *
  * Date: Jan 21Th, 2026
  * @package featuredproducts
- * @version 2.1.2
+ * @version 2.1.3
  * @author webitproff
  * @copyright Copyright (c) webitproff 2026 | https://github.com/webitproff
  * @license BSD
@@ -154,40 +154,47 @@ if (!empty($featured_pages)) {
             }
         }
 
-        // Получаем название категории текущей (главной) страницы с учётом перевода i18n4marketpro_structure
-        $category_code = $item['fieldmrkt_cat'] ?? '';
-        if (!empty($category_code)) {
 
-            // Сначала пытаемся найти перевод категории в таблице i18n4marketpro_structure
-            if (cot_plugin_active('i18n4marketpro') && $current_locale !== Cot::$cfg['defaultlang']) {
-                $cat_translation = $db->query(
-                    "SELECT istructure_title FROM $db_i18n4marketpro_structure
-                     WHERE istructure_code = ? AND istructure_locale = ?",
-                    [$category_code, $current_locale]
-                )->fetchColumn();
-                if ($cat_translation) {
-                    $page_category_name = htmlspecialchars($cat_translation, ENT_QUOTES, 'UTF-8');
-                }
-            }
+		// ПРАВКА: Получаем название категории для рекомендованной страницы (не текущей)
+		$featured_category_code = $featured_page['fieldmrkt_cat'] ?? '';  // Вставка правильной категории для рекомендованной страницы
+		$featured_page_category_name = ''; // Инициализируем переменную
 
-            // Если перевода нет — берём оригинальное название из таблицы structure
-            if (empty($page_category_name)) {
-                $category_name_result = $db->query(
-                    "SELECT structure_title FROM $db_structure WHERE structure_code = ? AND structure_area = 'market'",
-                    [$category_code]
-                )->fetchColumn();
-                $page_category_name = !empty($category_name_result)
-                    ? htmlspecialchars($category_name_result, ENT_QUOTES, 'UTF-8')
-                    : htmlspecialchars($category_code, ENT_QUOTES, 'UTF-8');
-            }
-        }
+		if (!empty($featured_category_code)) {
+
+			// Сначала пытаемся найти перевод категории в таблице i18n4marketpro_structure для рекомендованной страницы
+			if (cot_plugin_active('i18n4marketpro') && $current_locale !== Cot::$cfg['defaultlang']) {
+				// Запрос на перевод категории для текущего языка
+				$cat_translation = $db->query(
+					"SELECT istructure_title FROM $db_i18n4marketpro_structure
+					 WHERE istructure_code = ? AND istructure_locale = ?",
+					[$featured_category_code, $current_locale]
+				)->fetchColumn();
+				if ($cat_translation) {
+					$featured_page_category_name = htmlspecialchars($cat_translation, ENT_QUOTES, 'UTF-8');
+				}
+			}
+
+			// Если перевода нет — берём оригинальное название из таблицы structure для языка по умолчанию
+			if (empty($featured_page_category_name)) {
+				// Получаем оригинальное название категории для языка по умолчанию
+				$category_name_result = $db->query(
+					"SELECT structure_title FROM $db_structure WHERE structure_code = ? AND structure_area = 'market'",
+					[$featured_category_code]
+				)->fetchColumn();
+				
+				// Если нашли категорию, то берем её название
+				$featured_page_category_name = !empty($category_name_result)
+					? htmlspecialchars($category_name_result, ENT_QUOTES, 'UTF-8')
+					: htmlspecialchars($featured_category_code, ENT_QUOTES, 'UTF-8');
+			}
+		}
 
         // Получаем ссылку на главное изображение связанной страницы (функция плагина)
         $featured_image = get_featuredproducts_main_first_image($featured_page['fieldmrkt_id'] ?? 0);
-		
-		// Формируем финальное описание: берем desc или text, очищаем и обрезаем до 160 символов
-		$descriptionText = $featured_page['fieldmrkt_text'] ?? '';
-		$page_market_text = cot_string_truncate(featuredproducts_descriptionText_cleaning($descriptionText), 160, true, false);
+        
+        // Формируем финальное описание: берем desc или text, очищаем и обрезаем до 160 символов
+        $descriptionText = $featured_page['fieldmrkt_text'] ?? '';
+        $page_market_text = cot_string_truncate(featuredproducts_descriptionText_cleaning($descriptionText), 160, true, false);
 
         // Формируем корректный URL страницы — через alias, если он есть, иначе через ID
         $featured_url = (isset($featured_page['fieldmrkt_alias']) && !empty($featured_page['fieldmrkt_alias']))
@@ -204,8 +211,8 @@ if (!empty($featured_pages)) {
                 ENT_QUOTES,
                 'UTF-8'
             ),
-            'FEATURED_PRODUCTS_ROW_CAT_TITLE' => htmlspecialchars($page_category_name, ENT_QUOTES, 'UTF-8'),
-            'FEATURED_PRODUCTS_ROW_CAT_URL' => cot_url('market', 'c=' . $item['fieldmrkt_cat'], '', true),
+            'FEATURED_PRODUCTS_ROW_CAT_TITLE' => htmlspecialchars($featured_page_category_name, ENT_QUOTES, 'UTF-8'),
+			'FEATURED_PRODUCTS_ROW_CAT_URL' => cot_url('market', 'c=' . $featured_page['fieldmrkt_cat'], '', true),
             'FEATURED_PRODUCTS_ROW_LINK_MAIN_IMAGE' => htmlspecialchars($featured_image, ENT_QUOTES, 'UTF-8'),
         ]);
 
@@ -214,12 +221,11 @@ if (!empty($featured_pages)) {
     }
 
     // После обработки всех строк парсим основной блок
-	// это содержимое нашего featuredproducts.market.tpl
+    // это содержимое нашего featuredproducts.market.tpl
     $tt->parse('MAIN');
-	// ложим теперь весь наш featuredproducts.market.tpl в тег {FEATURED_PRODUCTS_PAGES} для шаблона market.tpl
-	$t->assign('FEATURED_PRODUCTS_PAGES', $tt->text('MAIN'));
+    // ложим теперь весь наш featuredproducts.market.tpl в тег {FEATURED_PRODUCTS_PAGES} для шаблона market.tpl
+    $t->assign('FEATURED_PRODUCTS_PAGES', $tt->text('MAIN'));
 
-} else 
-{
-	return;
+} else {
+    return;
 }
