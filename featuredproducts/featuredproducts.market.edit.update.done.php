@@ -22,7 +22,7 @@
 defined('COT_CODE') or die('Wrong URL');
 
 global $db, $db_market, $db_x, $cfg; // ← $page_id, $id,  — ключевой fallback для edit/update
-
+require_once cot_incfile('featuredproducts', 'plug'); 
 // При редактировании существующей страницы используем $id (он всегда доступен после загрузки страницы)
 $real_id = (int)($id > 0 ? $id : $page_id);
 
