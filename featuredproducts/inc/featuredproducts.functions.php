@@ -13,7 +13,16 @@
 
 
 defined('COT_CODE') or die('Wrong URL');
+// коннектимся к модулю товаров
+require_once cot_incfile('market', 'module'); 
 
+// проверяем, что бы по другим файлам, где это нужно, было подключение всего, что в этом файле
+// require_once cot_incfile('featuredproducts', 'plug'); 
+
+// Определяем таблицу (если не видит - даем памятного)
+if (!isset($db_market )) {
+    $db_market = Cot::$db->market;
+}
 require_once cot_langfile('featuredproducts', 'plug');
 
 /**
